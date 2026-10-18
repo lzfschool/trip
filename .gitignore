@@ -1,0 +1,16 @@
+# Excel 開啟中產生的鎖定檔
+~$*
+
+# 自動備份（_setup.ps1 與歷次變更前產生，不需進版控）
+*_備份_*.xlsm
+*_目前版本備份_*.xlsm
+*_匯入前備份_*.xlsm
+
+# Google Drive for desktop
+.tmp.drivedownload/
+.tmp.driveupload/
+desktop.ini
+
+# Windows
+Thumbs.db
+ehthumbs.db

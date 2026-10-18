@@ -1,0 +1,19 @@
+# 預設不要自作主張改行尾
+* -text
+
+# 文字檔：工作區維持 CRLF（Windows / VBE / PowerShell 都預期 CRLF）
+*.bas   text eol=crlf
+*.ps1   text eol=crlf
+*.bat   text eol=crlf
+*.md    text eol=crlf
+.gitignore      text eol=crlf
+.gitattributes  text eol=crlf
+
+# Big5(cp950) 版本的模組：不是 UTF-8，交給 git 當二進位保存，避免被正規化破壞
+*_Big5.bas binary
+
+# 二進位
+*.xlsm binary
+*.xlsx binary
+*.docx binary
+*.pdf  binary
