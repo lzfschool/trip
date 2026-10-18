@@ -6,13 +6,22 @@
 
 ## 換電腦第一件事
 
-本專案**不使用 git**，靠 Google Drive 同步這個資料夾。在新電腦上：
+版本控制：<https://github.com/lzfschool/trip>（**私有** repo，主分支 `main`）
 
-1. 等 Google Drive 把 `lzf/lzf115/claudeai/體育組差旅` 同步完成
-2. 雙擊 **`安裝.bat`**
-3. 要用 Claude Code 的話，直接把這個資料夾設為專案資料夾，本檔會自動載入
+| 位置 | 怎麼取得 | 能做什麼 |
+|---|---|---|
+| 主力機 `G:\我的雲端硬碟\lzf\lzf115\claudeai\體育組差旅` | Google Drive 同步 ＋ git | 全部 |
+| 其他 Windows 電腦 | `git clone`，**放本機路徑，不要放進 Google Drive** | 全部（需 Excel） |
+| claude.ai/code | 開啟 `lzfschool/trip` | 只能改 `.bas`／`.md`／資料表，**沒有 Excel**，巨集與 `_calc.ps1` 跑不了 |
+
+`.git` 位在 Google Drive 同步資料夾內。單機使用沒問題，但**不要**讓第二台電腦同時同步這個資料夾又做 git 操作，
+Drive 可能在 git 寫入到一半時同步而損壞 repo。第二台一律用 clone。
+
+新電腦步驟：
 
 ```bash
+git clone https://github.com/lzfschool/trip.git
+cd trip
 安裝.bat
 ```
 
@@ -99,6 +108,8 @@ J:L【參考C】區間車票價、N:S【參考D】場館→下車站／接駁。
 
 ## 改程式碼要注意
 
+0. `.xlsm` 是二進位檔，git 看得出它變了但看不出改了什麼。**真正可 diff 的是 `.bas`**，
+   所以改邏輯一律改 `.bas` 再匯入，不要只在 VBE 裡改完就存檔
 1. **`.bas` 是正本**，改完必須重新匯入活頁簿才會生效：`安裝.bat` 選 (d)，或 `Alt`+`F11` →檔案→匯入檔案
 2. 自動匯入需要 Excel 的「**信任存取 VBA 專案物件模型**」已開啟
 3. VBE 以 ANSI(cp950) 讀無 BOM 的 `.bas`。`Module2_車資試算.bas` 存成 **UTF-8 + BOM**，
