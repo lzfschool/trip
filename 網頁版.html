@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>體育組差旅概算</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap">
+<style>
+/* 版面：公文式概算表為主體；上方分頁切換「概算表／競賽資訊／費率對照」，表格各自橫向捲動 */
+:root{
+  --bg:#f5f7f6; --paper:#ffffff; --ink:#1d2a33; --muted:#5d6b73; --line:#cfd8d6;
+  --head:#e3eef2; --accent:#1f6f78; --accent-ink:#ffffff; --total:#fbf1d2;
+  --warn-bg:#fff6dc; --warn:#9a6a00; --bad:#b3261e; --ok:#2e7d4f; --hl:#fff29a;
+  --f-display:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --f-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12181b; --paper:#1a2226; --ink:#e3eaec; --muted:#9aa8ae; --line:#33424a;
+  --head:#22323a; --accent:#5fb3bb; --accent-ink:#0d1517; --total:#3a3320;
+  --warn-bg:#33290f; --warn:#f0c55a; --bad:#ff8a80; --ok:#7fd3a0; --hl:#4d4410; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12181b; --paper:#1a2226; --ink:#e3eaec; --muted:#9aa8ae; --line:#33424a;
+  --head:#22323a; --accent:#5fb3bb; --accent-ink:#0d1517; --total:#3a3320;
+  --warn-bg:#33290f; --warn:#f0c55a; --bad:#ff8a80; --ok:#7fd3a0; --hl:#4d4410; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:grid;gap:18px}
+header{display:grid;gap:4px}
+h1{font-family:var(--f-display);font-size:1.6rem;margin:0;text-wrap:balance;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:.88rem;margin:0}
+nav{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+nav button{font:inherit;background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px;color:var(--muted);cursor:pointer}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:700}
+nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+section[role="tabpanel"]{display:grid;gap:16px;min-width:0}
+.summary{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:baseline;padding:14px 16px;background:var(--paper);border:1px solid var(--line);border-radius:6px}
+.summary .k{color:var(--muted);font-size:.8rem;letter-spacing:.06em}
+.summary .v{font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums}
+.summary .item{display:grid}
+.btn{font:inherit;font-size:.88rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:4px;padding:5px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{font-size:.78rem;padding:2px 8px}
+.btn.danger{color:var(--bad)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sheet{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:16px;display:grid;gap:12px;min-width:0}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.sheet h2{font-family:var(--f-display);font-size:1.2rem;margin:0;text-wrap:balance}
+.meta{color:var(--muted);font-size:.85rem}
+.chip{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:99px;border:1px solid var(--accent);color:var(--accent);margin-left:6px;vertical-align:2px}
+.scroll{overflow-x:auto;min-width:0}
+table{border-collapse:collapse;width:100%}
+table.est{min-width:620px}
+.est th,.est td{border:1px solid var(--line);padding:6px 8px;vertical-align:middle}
+.est th{background:var(--head);font-weight:700;text-align:center;white-space:nowrap}
+.est td.c{text-align:center;white-space:nowrap}
+.est td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.est td.d{white-space:pre-line;font-size:.9rem}
+.est tr.total td{background:var(--total);font-weight:700}
+.notes{margin:0;padding:0;list-style:none;font-size:.88rem;display:grid;gap:2px}
+.warns{margin:0;padding:10px 12px 10px 14px;list-style:none;background:var(--warn-bg);border-left:4px solid var(--warn);border-radius:4px;display:grid;gap:6px;font-size:.88rem}
+.warns li{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.warns b{color:var(--warn)}
+.empty{padding:28px;text-align:center;color:var(--muted);background:var(--paper);border:1px dashed var(--line);border-radius:6px}
+.edit th,.edit td{border-bottom:1px solid var(--line);padding:4px 4px;text-align:left;vertical-align:top}
+.edit th{font-size:.78rem;color:var(--muted);font-weight:500;white-space:nowrap;letter-spacing:.03em}
+.edit input,.edit select,.edit textarea{font:inherit;font-size:.88rem;width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:3px;padding:3px 6px}
+.edit textarea{resize:vertical;min-height:2.2em}
+.edit input[type="number"]{text-align:right;font-variant-numeric:tabular-nums}
+.edit tr.hl td{background:var(--hl)}
+.edit td.ops{white-space:nowrap}
+.edit td.idx{color:var(--muted);font-size:.78rem;text-align:right;padding-top:8px;font-variant-numeric:tabular-nums}
+.block{display:grid;gap:8px;min-width:0}
+.block h3{font-family:var(--f-display);font-size:1.05rem;margin:0}
+.block p{margin:0;color:var(--muted);font-size:.85rem;max-width:68ch}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:4px;font-size:.88rem;z-index:20}
+.confirm{display:inline-flex;gap:6px;align-items:center;font-size:.85rem}
+textarea.io{width:100%;box-sizing:border-box;min-height:8em;font-family:ui-monospace,Consolas,monospace;font-size:.78rem;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.status{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:.82rem;color:var(--muted)}
+.status [data-kind="ok"]{color:var(--ok)} .status [data-kind="bad"]{color:var(--bad)}
+#conn{max-width:460px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px;display:grid;gap:10px}
+#conn h2{font-family:var(--f-display);margin:0;font-size:1.2rem} #conn p{margin:0;color:var(--muted);font-size:.88rem}
+#conn .err{color:var(--bad)} .form{display:grid;gap:6px}
+.form input{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:4px;padding:6px 8px;min-width:0}
+.form .row{margin-top:8px} code{font-size:.85em}
+body{margin:0}
+[hidden]{display:none!important}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>基本補助費概算表</h1>
+    <p class="sub">依「桃園市高級中等以下學校參加國內運動競賽補助要點－基本補助費基準表」計列 ‧ 出發地：楊梅 </p>
+    <div class="status"><span id="who"></span><span id="syncState"></span><button class="btn small" id="reloadBtn">重新載入</button><button class="btn small" id="logoutBtn">登出</button></div>
+  </header>
+  <section id="conn" hidden></section>
+  <div id="app" hidden style="display:grid;gap:18px">
+  <nav role="tablist">
+    <button role="tab" id="tab-out" data-tab="out">概算表</button>
+    <button role="tab" id="tab-comp" data-tab="comp">競賽資訊</button>
+    <button role="tab" id="tab-rate" data-tab="rate">費率對照</button>
+    <button role="tab" id="tab-io" data-tab="io">匯入／匯出</button>
+  </nav>
+
+  <section role="tabpanel" id="p-out"></section>
+
+  <section role="tabpanel" id="p-comp" hidden>
+    <div class="block">
+      <h3>競賽資訊</h3>
+      <p>每列一場比賽。A 名稱、起訖日期、地點、選手人數為必填。單趟票價留空＝查【三】路線車資。職員人數空白視為 0。</p>
+    </div>
+    <div class="scroll"><table class="edit" id="compTable"></table></div>
+    <div class="row"><button class="btn primary" id="addComp">新增比賽</button></div>
+  </section>
+
+  <section role="tabpanel" id="p-rate" hidden>
+    <div class="block">
+      <h3>【一】地區費率表</h3>
+      <div class="scroll"><table class="edit" id="regTable"></table></div>
+    </div>
+    <div class="block">
+      <h3>【二】縣市→地區對照表</h3>
+      <p>由上而下逐列比對比賽地點，先命中者為準。備註含「★待確認」的列會在概算時提醒。</p>
+      <div class="scroll"><table class="edit" id="cityTable"></table></div>
+      <div class="row"><button class="btn" data-add="cities">新增一列</button></div>
+    </div>
+    <div class="block">
+      <h3>【三】路線車資表</h3>
+      <p>由上而下比對地點關鍵字。「＊預設」是查不到路線時的後備，無論放在哪一列都只在最後才使用。票價以本表為準，交通費明細.pdf 僅供參考。</p>
+      <div class="scroll"><table class="edit" id="fareTable"></table></div>
+      <div class="row"><button class="btn" data-add="fares">新增一列</button></div>
+    </div>
+    <div class="row" id="resetRow"><button class="btn danger" id="resetBtn">還原為活頁簿原始資料</button></div>
+  </section>
+
+  <section role="tabpanel" id="p-io" hidden>
+    <div class="block">
+      <h3>匯出</h3>
+      <p>複製下列 JSON 保存，或貼到另一台電腦的此頁面還原。含競賽資訊與三張費率表。</p>
+      <textarea class="io" id="exportBox" readonly></textarea>
+      <div class="row"><button class="btn" id="copyJson">複製 JSON</button></div>
+    </div>
+    <div class="block">
+      <h3>匯入</h3>
+      <p>貼上先前匯出的 JSON 後按「匯入」，會取代目前全部資料。</p>
+      <textarea class="io" id="importBox" placeholder="貼上 JSON"></textarea>
+      <div class="row"><button class="btn primary" id="doImport">匯入</button><span id="importMsg" class="meta"></span></div>
+    </div>
+  </section>
+  </div>
+</div>
+
+<script>
+(function(){
+const DEFAULT_REGION="中部、南部及東部地區", PENDING="★待確認", FALLBACK="＊預設";
+const DEFAULTS={
+  comps:[
+    {name:"全國青少年跆拳道錦標賽",start:"2026-09-08",end:"2026-09-10",loc:"台南市立新營體育館",players:3,staff:1,prep:"否",mode:"大眾運輸",fare:"",items:1,perItem:100,clean:200,src:"基本補助費"},
+    {name:"柔道錦標賽",start:"2026-10-10",end:"2026-10-15",loc:"新竹火車站",players:5,staff:1,prep:"否",mode:"大眾運輸",fare:"",items:1,perItem:100,clean:200,src:"基本補助費"}
+  ],
+  regions:[
+    {name:"桃園市",meal:250,room:0,way:"每日往返一次",car:6000,commute:0},
+    {name:"北部地區",meal:300,room:0,way:"每日往返一次",car:8000,commute:0},
+    {name:"中部、南部及東部地區",meal:300,room:700,way:"往返一次",car:12000,commute:700},
+    {name:"外島地區",meal:300,room:700,way:"往返一次",car:6000,commute:0}
+  ],
+  cities:[["桃園","桃園市"],["臺北","北部地區"],["台北","北部地區"],["新北","北部地區"],["基隆","北部地區"],["新竹","北部地區"],["苗栗","中部、南部及東部地區"],["臺中","中部、南部及東部地區"],["台中","中部、南部及東部地區"],["彰化","中部、南部及東部地區"],["南投","中部、南部及東部地區"],["雲林","中部、南部及東部地區"],["嘉義","中部、南部及東部地區"],["臺南","中部、南部及東部地區"],["台南","中部、南部及東部地區"],["高雄","中部、南部及東部地區"],["屏東","中部、南部及東部地區"],["宜蘭","中部、南部及東部地區"],["花蓮","中部、南部及東部地區"],["臺東","中部、南部及東部地區"],["台東","中部、南部及東部地區"],["澎湖","外島地區"],["金門","外島地區"],["連江","外島地區"],["馬祖","外島地區"],["中壢","桃園市"],["楊梅","桃園市"],["平鎮","桃園市"],["八德","桃園市"],["龜山","桃園市"],["蘆竹","桃園市"],["龍潭","桃園市"],["大園","桃園市"],["新屋","桃園市"],["竹北","北部地區"],["竹東","北部地區"],["湖口","北部地區"],["板橋","北部地區"],["三重","北部地區"],["新莊","北部地區"],["淡水","北部地區"],["汐止","北部地區"],["竹南","中部、南部及東部地區"],["頭份","中部、南部及東部地區"],["豐原","中部、南部及東部地區"],["沙鹿","中部、南部及東部地區"],["員林","中部、南部及東部地區"],["斗六","中部、南部及東部地區"],["虎尾","中部、南部及東部地區"],["新營","中部、南部及東部地區"],["岡山","中部、南部及東部地區"],["鳳山","中部、南部及東部地區"],["羅東","中部、南部及東部地區"],["馬公","外島地區"]].map(([kw,region])=>({kw,region,note:""})),
+  fares:[
+    ["新竹",64,"(區間)楊梅-新竹64元",""],["竹北",64,"(區間)楊梅-新竹64元",""],
+    ["臺北",133,"(區間)楊梅-中壢24元\n(自強)中壢-臺北89元\n(公車)20元",""],["台北",133,"(區間)楊梅-中壢24元\n(自強)中壢-臺北89元\n(公車)20元",""],
+    ["新北",133,"(區間)楊梅-中壢24元\n(自強)中壢-臺北89元\n(公車)20元",""],["基隆",133,"(區間)楊梅-中壢24元\n(自強)中壢-臺北89元\n(公車)20元",""],
+    ["桃園",18,"(區間)楊梅-賽場18元",""],["中壢",18,"(區間)楊梅-賽場18元",""],["楊梅",18,"(區間)楊梅-賽場18元",""],["平鎮",18,"(區間)楊梅-賽場18元",""],
+    ["新營",709,"(區間)楊梅-新竹64元\n(自強)新竹-新營619元\n(大台南公車棕3線)新營車站-新營體育館26元","臺南市新營區長榮路二段78號(約217公里)"],
+    ["臺中",362,"(區間)楊梅-新竹64元\n(自強)新竹-臺中278元\n(公車)20元",""],["台中",362,"(區間)楊梅-新竹64元\n(自強)新竹-臺中278元\n(公車)20元",""],
+    ["新左營",693,"(區間)楊梅-新竹64元\n(自強)新竹-新左營609元\n(高雄捷運)新左營-世運站20元","世運主場館"],
+    ["＊預設",0,"（查無路線：請於「競賽資訊」單趟票價欄填入實際票價，並檢附票價圖）",""]
+  ].map(([kw,fare,detail,extra])=>({kw,fare,detail,extra}))
+};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=v=>{const n=parseFloat(v);return isFinite(n)?n:0};
+const fmt=n=>Math.round(n).toLocaleString("en-US");
+const oneLine=s=>String(s).replace(/\r?\n/g,"＋");
+function parseDate(s){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||"");if(!m)return null;const d=new Date(+m[1],m[2]-1,+m[3]);return isNaN(d)?null:d}
+const md=d=>(d.getMonth()+1)+"/"+d.getDate();
+
+/* ---- 計算：移植自 Module1_更新資訊.bas 的 BuildOneSheet ---- */
+function isValid(c){return String(c.name||"").trim()&&parseDate(c.start)&&parseDate(c.end)&&num(c.players)>0}
+function lookupRegion(loc){
+  for(const r of S.cities){const kw=String(r.kw||"").trim();if(!kw)break;
+    if(loc.includes(kw))return{region:String(r.region||"").trim(),pending:String(r.note||"").includes(PENDING),kw}}
+  return null}
+function lookupFare(loc){
+  let fb=null;
+  for(const r of S.fares){const kw=String(r.kw||"").trim();if(!kw)break;
+    if(kw===FALLBACK){fb=fb||r;continue}
+    if(loc.includes(kw))return{fare:num(r.fare),detail:String(r.detail||""),extra:String(r.extra||"").trim(),missing:false}}
+  return{fare:fb?num(fb.fare):0,detail:fb?String(fb.detail||""):"",extra:"",missing:true}}
+
+function build(c){
+  const W=[]; const title=String(c.name).trim(); const loc=String(c.loc||"").trim();
+  const dS=parseDate(c.start), dE=parseDate(c.end);
+  const players=Math.trunc(num(c.players)), staff=Math.trunc(num(c.staff)), head=players+staff;
+  const needPrep=String(c.prep||"").includes("是");
+  let mode=String(c.mode||"").trim()||"大眾運輸";
+  const override=num(c.fare), items=num(c.items), perItem=num(c.perItem), clean=num(c.clean);
+  const src=String(c.src||"").trim()||"基本補助費";
+  if(!loc){W.push({t:"比賽地點空白，無法查地區與車資，已略過。"});return{title,skip:true,W}}
+  if(dE<dS){W.push({t:"結束日期早於起始日期，已略過。"});return{title,skip:true,W}}
+  const days=Math.round((dE-dS)/864e5)+1;
+
+  let rg=lookupRegion(loc), region, regionPending=false;
+  if(!rg){region=DEFAULT_REGION;regionPending=true;
+    W.push({t:"【二】查無比賽地點「"+loc+"」，地區暫以「"+region+"」計算。",act:"city",loc})}
+  else{region=rg.region;regionPending=rg.pending;
+    if(rg.pending)W.push({t:"【二】「"+rg.kw+"」的地區仍標示「"+PENDING+"」，本次以「"+region+"」計算，請確認。"})}
+  const R=S.regions.find(x=>String(x.name).trim()===region);
+  if(!R){W.push({t:"【一】找不到地區「"+region+"」，已略過。"});return{title,skip:true,W}}
+  const meal=num(R.meal), room=num(R.room), way=String(R.way||""), carCap=num(R.car), commuteCap=num(R.commute);
+
+  let fundDays=days;
+  if(needPrep){
+    if(room>0&&mode!=="每日通勤")fundDays=days+1;
+    else W.push({t:"屬"+region+"（或採每日通勤），依基準表備註（四）不適用「移地準備加一日」，已忽略。"})}
+  const nights=(room>0&&mode!=="每日通勤")?Math.max(fundDays-1,0):0;
+
+  let F=lookupFare(loc), fare=F.fare, detail=F.detail, extra=F.extra;
+  if(override>0){fare=override;detail="單趟票價 "+fmt(fare)+" 元（人工填列）"}
+  else if(F.missing&&mode!=="租賃車輛"){detail="（待填票價）";
+    W.push({t:"【三】查無「"+loc+"」的路線，本次交通費以 0 計。請在【三】新增路線，或在競賽資訊填單趟票價。",act:"fare",loc})}
+  else if(fare<=0&&mode!=="租賃車輛"){W.push({t:"【三】「"+loc+"」的單趟票價為 0，本次交通費以 0 計。"});if(!detail)detail="（待填票價）"}
+
+  let tCell,tNote,tAmt,tExpr;
+  if(mode==="租賃車輛"){
+    const carDays=(room>0&&nights>0)?2:1; tAmt=carCap*carDays; tExpr=fmt(carCap)+"×"+carDays;
+    tCell="租賃車輛（不含一般計程車及多元化計程車）\n("+region+")每日上限 "+fmt(carCap)+" 元\n"+carDays+"日 × "+fmt(carCap)+"元（以上限估列，核實補助）";
+    tNote="採租賃車輛，"+region+"每日上限"+fmt(carCap)+"元；依基準表備註（三）補助"+carDays+"日，以上限估列，核實補助。";
+  }else if(mode==="每日通勤"){
+    let daily=fare*2, capped=false;
+    if(commuteCap>0&&daily>commuteCap){daily=commuteCap;capped=true;
+      W.push({t:"採每日通勤，往返 "+fmt(fare*2)+" 元已逾基準表備註（二）每日 "+fmt(commuteCap)+" 元上限，已依上限計列。"})}
+    tAmt=head*fundDays*daily; tExpr=head+"×"+fundDays+"×"+fmt(daily);
+    tCell=detail+"\n採每日通勤往返（不列住宿費）\n"+head+"人 × "+fundDays+"日 × 每人每日"+fmt(daily)+"元"+(capped?"\n＊已依基準表備註（二）每日"+fmt(commuteCap)+"元上限計列":"");
+    tNote="採每日通勤往返，"+oneLine(detail)+"，每人每日"+fmt(daily)+"元；計 "+head+"人×"+fundDays+"日"+(capped?"（已套用每日"+fmt(commuteCap)+"元上限）":"")+"。";
+  }else{
+    mode="大眾運輸";
+    if(way.includes("每日")){const trips=fundDays*2;
+      tCell=detail+"\n"+head+"人 × "+fundDays+"日 × 2趟 × 每趟"+fmt(fare)+"元\n＊("+region+")依基準表核給「每日往返一次」";
+      tNote=oneLine(detail)+"＝"+fmt(fare)+"元/一趟；"+region+"依基準表核給每日往返一次，計 "+head+"人×"+fundDays+"日×2趟。";
+      tAmt=fare*trips*head; tExpr=fmt(fare)+"×"+trips+"×"+head;
+    }else{
+      tCell=detail+"\n"+head+"人 × 2趟 × 每趟"+fmt(fare)+"元\n＊("+region+")依基準表核給「往返一次」";
+      tNote=oneLine(detail)+"＝"+fmt(fare)+"元/一趟；"+region+"依基準表核給往返一次，計 "+head+"人×2趟。";
+      tAmt=fare*2*head; tExpr=fmt(fare)+"×2×"+head;
+    }
+  }
+
+  const rows=[];
+  rows.push({i:1,item:"報名費",d:"核實補助（依大會簡章）\n選手"+players+"人 × ("+items+"項 × 每項"+fmt(perItem)+"元 + 每人清潔費"+fmt(clean)+"元)",amt:players*(items*perItem+clean),src});
+  let roomD,roomAmt=0;
+  if(nights>0){roomD="("+region+")每人每晚"+fmt(room)+"元\n"+head+"人 × "+nights+"晚 × "+fmt(room)+"元\n＊補助日數"+fundDays+"日"+(fundDays>days?"（含移地準備1日）":"")+"，末日屬折返日不列住宿，故提列"+nights+"晚";roomAmt=head*nights*room}
+  else if(room===0)roomD="("+region+")依基準表不核予住宿費";
+  else if(mode==="每日通勤")roomD="採每日通勤往返，不列住宿費";
+  else roomD="實際參賽"+days+"日，末日屬折返日\n依基準表備註（四）不核予住宿費";
+  rows.push({i:2,item:"住宿費",d:roomD,amt:roomAmt,src:""});
+  rows.push({i:3,item:"膳費",d:"("+region+")每人每日"+fmt(meal)+"元\n"+head+"人 × "+fundDays+"日 × "+fmt(meal)+"元"+(fundDays>days?"\n＊需事前移地準備，依基準表備註（四）加計1日":""),amt:head*fundDays*meal,src:""});
+  rows.push({i:4,item:"交通費",d:tCell,amt:tAmt,src:""});
+  const total=rows.reduce((a,r)=>a+r.amt,0);
+
+  const roc=dS.getFullYear()-1911;
+  const notes=[
+    "1.比賽日期："+roc+"年"+md(dS)+"－"+md(dE)+"，實際參賽"+days+"日"+(fundDays>days?"（需事前移地準備，補助日數"+fundDays+"日）":"")+"。",
+    "2.比賽地點："+loc+(extra?"－"+extra:"")+"（依基準表屬"+region+"）",
+    "3.補助人數：選手"+players+"名、職員"+staff+"名，共"+head+"名。",
+    "4.交通費："+tNote,
+    room===0?"5.住宿費："+region+"依基準表不核予住宿費。":mode==="每日通勤"?"5.住宿費：採每日通勤往返，不列住宿費；交通費依基準表備註（二）以每人每日"+fmt(commuteCap)+"元為上限。":"5.住宿費：依基準表備註（四），參賽最後一日屬折返日，不核予住宿費。",
+    "6.本表依「桃園市高級中等以下學校參加國內運動競賽補助要點－基本補助費基準表」計列。"
+  ];
+  return{title,skip:false,W,rows,total,notes,region,regionPending,days,fundDays,head,dS,dE,mode,loc};
+}
+
+/* ---- 概算表輸出 ---- */
+const pOut=document.getElementById("p-out");
+let results=[];
+function renderOut(){
+  const valid=S.comps.map((c,i)=>({c,i})).filter(x=>isValid(x.c));
+  results=valid.map(x=>({...build(x.c),idx:x.i}));
+  if(!results.length){pOut.innerHTML='<div class="empty">還沒有有效的比賽資料。到「競賽資訊」填入名稱、起訖日期、地點與選手人數後，概算表會出現在這裡。</div>';return}
+  const ok=results.filter(r=>!r.skip), grand=ok.reduce((a,r)=>a+r.total,0), nW=results.reduce((a,r)=>a+r.W.length,0);
+  let h='<div class="summary"><div class="item"><span class="k">場次</span><span class="v">'+ok.length+'</span></div>'+
+    '<div class="item"><span class="k">預估經費總計（元）</span><span class="v">'+fmt(grand)+'</span></div>'+
+    '<div class="item"><span class="k">待確認事項</span><span class="v" style="color:'+(nW?'var(--warn)':'var(--ok)')+'">'+nW+'</span></div>'+
+    '<div class="row" style="margin-left:auto"><button class="btn" data-copyall>複製全部（貼到 Excel）</button></div></div>';
+  results.forEach((r,k)=>{
+    h+='<article class="sheet"><div class="sheet-head"><div><h2>'+esc(r.title)+'　概算表'+(r.skip?'':'<span class="chip">'+esc(r.region)+'</span>')+'</h2>';
+    if(!r.skip)h+='<div class="meta">'+(r.dS.getFullYear()-1911)+'年'+md(r.dS)+'－'+md(r.dE)+' ‧ '+esc(r.loc)+' ‧ '+r.head+'人 ‧ '+esc(r.mode)+'</div>';
+    h+='</div>'+(r.skip?'':'<button class="btn small" data-copy="'+k+'">複製此表</button>')+'</div>';
+    if(r.W.length){h+='<ul class="warns">'+r.W.map(w=>'<li><span><b>請確認：</b>'+esc(w.t)+'</span>'+
+      (w.act==="city"?'<button class="btn small" data-act="city" data-loc="'+esc(w.loc)+'">加入【二】</button>':'')+
+      (w.act==="fare"?'<button class="btn small" data-act="fare" data-loc="'+esc(w.loc)+'">加入【三】</button>':'')+'</li>').join("")+'</ul>'}
+    if(!r.skip){
+      h+='<div class="scroll"><table class="est"><thead><tr><th style="width:3.5em">項次</th><th style="width:5.5em">項目</th><th>明細</th><th style="width:7em">預估經費</th><th style="width:7em">經費來源</th></tr></thead><tbody>';
+      r.rows.forEach(x=>{h+='<tr><td class="c">'+x.i+'</td><td class="c">'+esc(x.item)+'</td><td class="d">'+esc(x.d)+'</td><td class="n">'+fmt(x.amt)+'</td><td class="c">'+esc(x.src)+'</td></tr>'});
+      h+='<tr class="total"><td class="c" colspan="3">合計</td><td class="n">'+fmt(r.total)+'</td><td></td></tr></tbody></table></div>';
+      h+='<ul class="notes"><li><b>備註：</b></li>'+r.notes.map(n=>'<li>'+esc(n)+'</li>').join("")+'</ul>';
+    }
+    h+='</article>';
+  });
+  pOut.innerHTML=h;
+}
+function tsvCell(s){s=String(s);return /[\t\n"]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
+function toTSV(r){
+  const L=[[r.title+"　概算表"],["項次","項目","明細","預估經費","經費來源"]];
+  r.rows.forEach(x=>L.push([x.i,x.item,x.d,Math.round(x.amt),x.src]));
+  L.push(["合計","","",Math.round(r.total),""],["備註："]);r.notes.forEach(n=>L.push([n]));
+  return L.map(row=>row.map(tsvCell).join("\t")).join("\n")}
+/* ---- 資料儲存：Supabase 或本機 ---- */
+const MAP={
+  comps:{table:"competitions",cols:{name:"name",start:"start_date",end:"end_date",loc:"location",players:"players",staff:"staff",prep:"prep",mode:"mode",fare:"fare",items:"items",perItem:"per_item",clean:"clean_fee",src:"fund_source"}},
+  regions:{table:"regions",cols:{name:"name",meal:"meal",room:"room",way:"fare_way",car:"car_cap",commute:"commute_cap"}},
+  cities:{table:"city_regions",cols:{kw:"keyword",region:"region",note:"note"}},
+  fares:{table:"fare_routes",cols:{kw:"keyword",fare:"fare",detail:"detail",extra:"extra"}}
+};
+const KEYS=Object.keys(MAP);
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==="x"?r:(r&3|8)).toString(16)}));
+const withIds=st=>{KEYS.forEach(k=>st[k].forEach(r=>{if(!r.id)r.id=uid()}));return st};
+const CFG_KEY="trip-supabase-config", LOCAL_KEY="trip-web-v1";
+const DEFAULT_URL="https://cfndlfumfsovqgkkfoug.supabase.co";
+function readCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY))||{}}catch(e){return{}}}
+function writeCfg(c){try{localStorage.setItem(CFG_KEY,JSON.stringify(c))}catch(e){}}
+
+let S={comps:[],regions:[],cities:[],fares:[]};
+let backend="none", sb=null, userEmail="";
+
+function toDb(key,row,sort){const o={id:row.id,sort,updated_at:new Date().toISOString()};
+  for(const[k,c] of Object.entries(MAP[key].cols)){let v=row[k];if(v===""||v===undefined)v=null;o[c]=v}return o}
+function fromDb(key,rec){const o={id:rec.id};for(const[k,c] of Object.entries(MAP[key].cols))o[k]=rec[c]??"";return o}
+
+const statusEl=document.getElementById("syncState");
+function setStatus(t,kind){statusEl.textContent=t;statusEl.dataset.kind=kind||""}
+function dbErr(e){const m=(e&&e.message)||String(e);setStatus("儲存失敗："+m,"bad");return m}
+
+async function loadAll(){
+  if(backend==="local"){let st=null;try{st=JSON.parse(localStorage.getItem(LOCAL_KEY))}catch(e){}
+    if(!st||!KEYS.every(k=>Array.isArray(st[k])))st=clone(DEFAULTS);S=withIds(st);saveLocal();return}
+  setStatus("讀取中…");
+  const res=await Promise.all(KEYS.map(k=>sb.from(MAP[k].table).select("*").order("sort",{ascending:true})));
+  const bad=res.find(r=>r.error);if(bad)throw bad.error;
+  const st={};KEYS.forEach((k,i)=>st[k]=res[i].data.map(r=>fromDb(k,r)));S=st;
+  setStatus("已同步 "+new Date().toLocaleTimeString("zh-TW",{hour12:false}),"ok");
+}
+function saveLocal(){try{localStorage.setItem(LOCAL_KEY,JSON.stringify(S))}catch(e){}}
+
+/* 單列修改：延遲 600ms 後寫入 */
+const timers=new Map();
+function saveRow(key,row){
+  if(backend==="local"){saveLocal();return}
+  setStatus("儲存中…");
+  const tk=key+":"+row.id;clearTimeout(timers.get(tk));
+  timers.set(tk,setTimeout(async()=>{timers.delete(tk);
+    const {error}=await sb.from(MAP[key].table).upsert(toDb(key,row,S[key].indexOf(row)*10));
+    if(error)dbErr(error);else if(!timers.size)setStatus("已儲存 "+new Date().toLocaleTimeString("zh-TW",{hour12:false}),"ok");
+  },600));
+}
+/* 新增／刪除／排序：整張表重編 sort 後寫入 */
+async function saveTable(key,deletedId){
+  if(backend==="local"){saveLocal();return}
+  setStatus("儲存中…");
+  if(deletedId){const {error}=await sb.from(MAP[key].table).delete().eq("id",deletedId);if(error)return dbErr(error)}
+  if(S[key].length){const {error}=await sb.from(MAP[key].table).upsert(S[key].map((r,i)=>toDb(key,r,i*10)));if(error)return dbErr(error)}
+  setStatus("已儲存 "+new Date().toLocaleTimeString("zh-TW",{hour12:false}),"ok");
+}
+/* 匯入或還原：清空四張表再整批寫入 */
+async function replaceAll(st){
+  st=withIds(clone(st));
+  if(backend==="local"){S=st;saveLocal();return}
+  setStatus("寫入中…");
+  for(const k of KEYS){
+    let r=await sb.from(MAP[k].table).delete().not("id","is",null);if(r.error)throw r.error;
+    if(st[k].length){r=await sb.from(MAP[k].table).insert(st[k].map((x,i)=>toDb(k,x,i*10)));if(r.error)throw r.error}
+  }
+  await loadAll();
+}
+
+/* ---- 概算表上的快速新增 ---- */
+pOut.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.copy!==undefined)copy(toTSV(results[+b.dataset.copy]),"已複製概算表，可直接貼到 Excel");
+  else if(b.hasAttribute("data-copyall"))copy(results.filter(r=>!r.skip).map(toTSV).join("\n\n"),"已複製全部概算表");
+  else if(b.dataset.act==="city"){S.cities.push({id:uid(),kw:b.dataset.loc,region:DEFAULT_REGION,note:PENDING});saveTable("cities");renderEditors();renderOut();toast("已加入【二】，地區暫定"+DEFAULT_REGION+"，請到「費率對照」確認")}
+  else if(b.dataset.act==="fare"){let at=S.fares.findIndex(f=>String(f.kw).trim()===FALLBACK);if(at<0)at=S.fares.length;
+    S.fares.splice(at,0,{id:uid(),kw:b.dataset.loc,fare:0,detail:"（待填：請填入實際單趟票價與路線明細，並檢附票價圖）",extra:""});saveTable("fares");renderEditors();renderOut();toast("已加入【三】，請到「費率對照」填入票價")}
+});
+
+/* ---- 可編輯表格 ---- */
+const COMP_COLS=[["name","比賽名稱","text","14em"],["start","起始日期","date","9.5em"],["end","結束日期","date","9.5em"],["loc","比賽地點","text","13em"],["players","選手","number","4.5em"],["staff","職員","number","4.5em"],["prep","移地準備","sel:否|是","4.5em"],["mode","交通方式","sel:大眾運輸|租賃車輛|每日通勤","7em"],["fare","單趟票價","number","6em"],["items","每人項目","number","4.5em"],["perItem","每項報名費","number","6em"],["clean","每人清潔費","number","6em"],["src","經費來源","text","8em"]];
+const SPECS={
+  comps:{el:"compTable",cols:COMP_COLS,order:false},
+  regions:{el:"regTable",cols:[["name","地區","text","12em"],["meal","膳費(元/人/日)","number","7em"],["room","住宿費(元/人/晚)","number","7em"],["way","交通費核給方式","sel:每日往返一次|往返一次","8em"],["car","租賃車每日上限","number","7em"],["commute","每日通勤上限","number","7em"]],order:false,fixed:true},
+  cities:{el:"cityTable",cols:[["kw","縣市關鍵字","text","8em"],["region","地區","region","12em"],["note","備註","text","12em"]],order:true,hl:r=>String(r.note||"").includes(PENDING)},
+  fares:{el:"fareTable",cols:[["kw","目的地關鍵字","text","7em"],["fare","單趟票價","number","6em"],["detail","路線明細","area","20em"],["extra","地點補充說明","area","14em"]],order:true,hl:r=>num(r.fare)<=0&&String(r.kw).trim()!==FALLBACK}
+};
+function cellInput(key,i,col,v){
+  const [f,,type,w]=col, a='data-t="'+key+'" data-i="'+i+'" data-f="'+f+'" aria-label="'+esc(col[1])+'" id="'+key+'-'+i+'-'+f+'"';
+  if(type.startsWith("sel:"))return '<select '+a+' style="min-width:'+w+'">'+type.slice(4).split("|").map(o=>'<option'+(o===v?' selected':'')+'>'+o+'</option>').join("")+'</select>';
+  if(type==="region"){const opts=S.regions.map(r=>r.name);if(v&&!opts.includes(v))opts.push(v);
+    return '<select '+a+' style="min-width:'+w+'">'+opts.map(o=>'<option'+(o===v?' selected':'')+'>'+esc(o)+'</option>').join("")+'</select>'}
+  if(type==="area")return '<textarea '+a+' rows="'+Math.max(1,String(v??"").split("\n").length)+'" style="min-width:'+w+'">'+esc(v)+'</textarea>';
+  return '<input '+a+' type="'+type+'" value="'+esc(v)+'" style="min-width:'+w+'"'+(type==="number"?' min="0" step="any"':'')+'>';
+}
+function renderTable(key){
+  const sp=SPECS[key], rows=S[key];
+  let h='<thead><tr>'+(sp.fixed?'':'<th></th>')+sp.cols.map(c=>'<th>'+esc(c[1])+'</th>').join("")+(sp.fixed?'':'<th></th>')+'</tr></thead><tbody>';
+  rows.forEach((r,i)=>{
+    h+='<tr'+(sp.hl&&sp.hl(r)?' class="hl"':'')+'>'+(sp.fixed?'':'<td class="idx">'+(i+1)+'</td>')+sp.cols.map(c=>'<td>'+cellInput(key,i,c,r[c[0]])+'</td>').join("");
+    if(!sp.fixed)h+='<td class="ops">'+(sp.order?'<button class="btn small" data-mv="-1" data-t="'+key+'" data-i="'+i+'" aria-label="上移">↑</button> <button class="btn small" data-mv="1" data-t="'+key+'" data-i="'+i+'" aria-label="下移">↓</button> ':'')+'<button class="btn small danger" data-del data-t="'+key+'" data-i="'+i+'">刪除</button></td>';
+    h+='</tr>';
+  });
+  document.getElementById(sp.el).innerHTML=h+'</tbody>';
+}
+function renderEditors(){KEYS.forEach(renderTable);refreshExport()}
+function refreshExport(){document.getElementById("exportBox").value=JSON.stringify(S,null,1)}
+document.addEventListener("input",e=>{
+  const t=e.target;if(!t.dataset||!t.dataset.t||!SPECS[t.dataset.t])return;
+  const key=t.dataset.t, i=+t.dataset.i, f=t.dataset.f, col=SPECS[key].cols.find(c=>c[0]===f), row=S[key][i];
+  row[f]=(col[2]==="number"&&t.value!=="")?num(t.value):t.value;
+  if(t.tagName==="TEXTAREA")t.rows=Math.max(1,t.value.split("\n").length);
+  const tr=t.closest("tr");if(SPECS[key].hl&&tr)tr.classList.toggle("hl",!!SPECS[key].hl(row));
+  saveRow(key,row);renderOut();refreshExport();
+  if(key==="regions"&&f==="name")renderTable("cities");
+});
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.mv&&b.dataset.t){const k=b.dataset.t,i=+b.dataset.i,j=i+ +b.dataset.mv;if(j<0||j>=S[k].length)return;[S[k][i],S[k][j]]=[S[k][j],S[k][i]];saveTable(k);renderTable(k);renderOut()}
+  else if(b.hasAttribute("data-del")&&b.dataset.t){const k=b.dataset.t,[gone]=S[k].splice(+b.dataset.i,1);saveTable(k,gone.id);renderTable(k);renderOut()}
+  else if(b.dataset.add){const k=b.dataset.add;S[k].push(k==="cities"?{id:uid(),kw:"",region:DEFAULT_REGION,note:""}:{id:uid(),kw:"",fare:0,detail:"",extra:""});saveTable(k);renderTable(k)}
+});
+document.getElementById("addComp").onclick=()=>{S.comps.push({id:uid(),name:"",start:"",end:"",loc:"",players:"",staff:"",prep:"否",mode:"大眾運輸",fare:"",items:1,perItem:"",clean:"",src:"基本補助費"});saveTable("comps");renderTable("comps");
+  const el=document.getElementById("comps-"+(S.comps.length-1)+"-name");if(el)el.focus()};
+
+/* 還原：頁內確認 */
+const resetRow=document.getElementById("resetRow");
+resetRow.addEventListener("click",async e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.id==="resetBtn"){resetRow.innerHTML='<span class="confirm">會以活頁簿原始資料取代'+(backend==="supabase"?'資料庫裡':'')+'全部的競賽資訊與費率表，確定還原？ <button class="btn danger" id="resetYes">還原</button><button class="btn" id="resetNo">取消</button></span>'}
+  else if(b.id==="resetYes"){resetBack();try{await replaceAll(DEFAULTS);renderEditors();renderOut();toast("已還原為活頁簿原始資料")}catch(err){dbErr(err)}}
+  else if(b.id==="resetNo")resetBack();
+});
+function resetBack(){resetRow.innerHTML='<button class="btn danger" id="resetBtn">還原為活頁簿原始資料</button>'}
+
+/* 匯入／匯出 */
+document.getElementById("copyJson").onclick=()=>copy(JSON.stringify(S),"已複製 JSON");
+document.getElementById("doImport").onclick=async()=>{
+  const msg=document.getElementById("importMsg");
+  try{const o=JSON.parse(document.getElementById("importBox").value);
+    if(!o||!KEYS.every(k=>Array.isArray(o[k])))throw new Error("缺少 comps／regions／cities／fares 其中之一");
+    await replaceAll(o);renderEditors();renderOut();msg.textContent="匯入完成";msg.style.color="var(--ok)"}
+  catch(err){msg.textContent="無法匯入："+(err.message||err)+"。請確認貼上的是本頁匯出的完整 JSON。";msg.style.color="var(--bad)"}
+};
+
+/* 共用 */
+let tt;function toast(s){let el=document.querySelector(".toast");if(!el){el=document.createElement("div");el.className="toast";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=s;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,2400)}
+function copy(text,ok){
+  const fallback=()=>{const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();let done=false;try{done=document.execCommand("copy")}catch(e){}ta.remove();toast(done?ok:"無法自動複製，請改用「匯入／匯出」頁手動選取")};
+  try{navigator.clipboard.writeText(text).then(()=>toast(ok),fallback)}catch(e){fallback()}
+}
+const tabs=[...document.querySelectorAll("nav button")];
+function showTab(id){tabs.forEach(b=>{const on=b.dataset.tab===id;b.setAttribute("aria-selected",on);document.getElementById("p-"+b.dataset.tab).hidden=!on});try{localStorage.setItem("trip-web-tab",id)}catch(e){}}
+tabs.forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+
+/* ---- 連線與登入 ---- */
+const connEl=document.getElementById("conn"), appEl=document.getElementById("app");
+function showConn(html){connEl.innerHTML=html;connEl.hidden=false;appEl.hidden=true}
+function setupForm(err){
+  const c=readCfg();
+  showConn('<h2>連線到 Supabase</h2><p>第一次使用請填入專案網址與 anon key（Supabase Dashboard → Project Settings → API）。只會存在這個瀏覽器，不會寫進檔案。</p>'+
+    (err?'<p class="err">'+esc(err)+'</p>':'')+
+    '<form id="cfgForm" class="form"><label for="cfgUrl">Project URL</label><input id="cfgUrl" required value="'+esc(c.url||DEFAULT_URL)+'">'+
+    '<label for="cfgKey">anon public key</label><input id="cfgKey" required value="'+esc(c.key||"")+'" placeholder="eyJhbGciOi…">'+
+    '<div class="row"><button class="btn primary" type="submit">儲存並繼續</button><button class="btn" type="button" id="goLocal">先用本機資料試用</button></div></form>');
+  document.getElementById("cfgForm").onsubmit=e=>{e.preventDefault();writeCfg({url:document.getElementById("cfgUrl").value.trim().replace(/\/+$/,""),key:document.getElementById("cfgKey").value.trim()});start()};
+  document.getElementById("goLocal").onclick=()=>{writeCfg({...readCfg(),local:true});start()};
+}
+function loginForm(err){
+  const c=readCfg();
+  showConn('<h2>登入</h2><p>使用在 Supabase（Authentication → Users）建立的帳號登入。專案：'+esc(c.url)+'</p>'+
+    (err?'<p class="err">'+esc(err)+'</p>':'')+
+    '<form id="loginForm" class="form"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required>'+
+    '<label for="pw">密碼</label><input id="pw" type="password" autocomplete="current-password" required>'+
+    '<div class="row"><button class="btn primary" type="submit">登入</button><button class="btn" type="button" id="editCfg">修改連線設定</button></div></form>');
+  document.getElementById("loginForm").onsubmit=async e=>{e.preventDefault();
+    const {error}=await sb.auth.signInWithPassword({email:document.getElementById("email").value.trim(),password:document.getElementById("pw").value});
+    if(error)loginForm("登入失敗："+error.message);else start()};
+  document.getElementById("editCfg").onclick=()=>setupForm();
+}
+async function openApp(){
+  connEl.hidden=true;appEl.hidden=false;
+  document.getElementById("who").textContent=backend==="local"?"本機試用（資料只存在此瀏覽器）":"Supabase ‧ "+userEmail;
+  renderEditors();renderOut();
+  let t0="out";try{t0=localStorage.getItem("trip-web-tab")||"out"}catch(e){}
+  showTab(tabs.some(b=>b.dataset.tab===t0)?t0:"out");
+  if(backend==="supabase"&&!KEYS.some(k=>S[k].length)){
+    pOut.insertAdjacentHTML("afterbegin",'<div class="empty">資料庫是空的。<button class="btn primary" id="seedBtn">寫入活頁簿原始資料</button></div>');
+    document.getElementById("seedBtn").onclick=async()=>{try{await replaceAll(DEFAULTS);renderEditors();renderOut()}catch(err){dbErr(err)}};
+  }
+}
+async function start(){
+  const c=readCfg();
+  if(c.local){backend="local";await loadAll();setStatus("");return openApp()}
+  if(!c.url||!c.key)return setupForm();
+  if(!window.supabase){return setupForm("無法載入 Supabase 程式庫（cdn.jsdelivr.net），請確認網路連線。")}
+  backend="supabase";
+  sb=window.supabase.createClient(c.url,c.key);
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session)return loginForm();
+  userEmail=session.user.email||"";
+  try{await loadAll()}catch(err){
+    const m=err.message||String(err);
+    return showConn('<h2>讀不到資料表</h2><p class="err">'+esc(m)+'</p><p>請確認已在 Supabase SQL Editor 執行過 repo 裡的 <code>supabase/schema.sql</code>。</p><div class="row"><button class="btn primary" id="retry">重試</button><button class="btn" id="out2">登出</button></div>'),
+      document.getElementById("retry").onclick=start, document.getElementById("out2").onclick=logout}
+  openApp();
+}
+async function logout(){if(sb)await sb.auth.signOut();start()}
+document.getElementById("reloadBtn").onclick=async()=>{try{await loadAll();renderEditors();renderOut();toast("已重新載入")}catch(err){dbErr(err)}};
+document.getElementById("logoutBtn").onclick=()=>{if(backend==="local"){writeCfg({...readCfg(),local:false});start()}else logout()};
+start();
+})();
+</script>
+</body>
+</html>
