@@ -50,14 +50,14 @@ cd trip
 | `交通費明細.pdf` | 票價與場館接駁的來源文件 |
 | `基本補助費基準表.pdf` | 補助費率法源 |
 | `運動賽事地點.docx` | 近三年賽事承辦單位與場館 |
-| `網頁版.html` | 不需 Excel 的網頁版概算表，資料存 Supabase（見下節） |
+| `index.html` | 不需 Excel 的網頁版概算表，資料存 Supabase（見下節） |
 | `supabase/schema.sql` | Supabase 建表＋RLS＋初始資料（由 xlsm 產生） |
 
 `*_備份_*.xlsm` 是歷次變更前的自動備份，可刪。
 
 ## 網頁版（Supabase）
 
-`網頁版.html` 用瀏覽器直接開即可，計算邏輯移植自 `Module1_更新資訊.bas`。
+`index.html` 用瀏覽器直接開即可，計算邏輯移植自 `Module1_更新資訊.bas`。
 資料庫：Supabase 專案 `cfndlfumfsovqgkkfoug`（https://cfndlfumfsovqgkkfoug.supabase.co）。
 
 | 資料表 | 對應 |
@@ -70,7 +70,7 @@ cd trip
 初次設定：
 1. Supabase Dashboard → SQL Editor 執行 `supabase/schema.sql`（**會清空重建**四張表）
 2. Authentication → Users 新增帳號（RLS 只允許登入者讀寫）
-3. 開 `網頁版.html`，填 Project URL 與 anon key（只存在該瀏覽器的 localStorage，不寫進 repo），再登入
+3. 開 `index.html`，填 Project URL 與 anon key（只存在該瀏覽器的 localStorage，不寫進 repo），再登入
 
 與 VBA 版的差異：比賽地點空白的列直接略過；只有備註含「★待確認」才提醒；`＊預設` 不論位置都只當後備；
 查不到地點時不自動改表，改由警告旁的「加入【二】／【三】」按鈕新增。網頁版與 `.xlsm` **不會互相同步**。
