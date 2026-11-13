@@ -97,7 +97,7 @@ body{margin:0}
   <header>
     <h1>基本補助費概算表</h1>
     <p class="sub">依「桃園市高級中等以下學校參加國內運動競賽補助要點－基本補助費基準表」計列 ‧ 出發地：楊梅 </p>
-    <div class="status"><span id="who"></span><span id="syncState"></span><button class="btn small" id="reloadBtn">重新載入</button><button class="btn small" id="logoutBtn">登出</button></div>
+    <div class="status"><span id="who"></span><span id="syncState"></span><button class="btn small" id="reloadBtn" hidden>重新載入</button><button class="btn small" id="logoutBtn" hidden>登出</button></div>
   </header>
   <section id="conn" hidden></section>
   <div id="app" hidden style="display:grid;gap:18px">
@@ -344,11 +344,15 @@ function fromDb(key,rec){const o={id:rec.id};for(const[k,c] of Object.entries(MA
 
 const statusEl=document.getElementById("syncState");
 function setStatus(t,kind){statusEl.textContent=t;statusEl.dataset.kind=kind||""}
-function dbErr(e){const m=(e&&e.message)||String(e);setStatus("儲存失敗："+m,"bad");return m}
+function dbErr(e,label){const m=(e&&e.message)||String(e);setStatus((label||"儲存失敗")+"："+m,"bad");return m}
+const NO_DB="尚未連線到資料庫，請先完成連線設定並登入";
+/* 雲端模式但 Supabase 用戶端尚未建立（設定／登入畫面、或連線失敗）時不得呼叫 sb */
+function noDb(){if(backend==="local"||sb)return false;setStatus(NO_DB,"bad");return true}
 
 async function loadAll(){
   if(backend==="local"){let st=null;try{st=JSON.parse(localStorage.getItem(LOCAL_KEY))}catch(e){}
     if(!st||!KEYS.every(k=>Array.isArray(st[k])))st=clone(DEFAULTS);S=withIds(st);saveLocal();return}
+  if(!sb)throw new Error(NO_DB);
   setStatus("讀取中…");
   const res=await Promise.all(KEYS.map(k=>sb.from(MAP[k].table).select("*").order("sort",{ascending:true})));
   const bad=res.find(r=>r.error);if(bad)throw bad.error;
@@ -361,9 +365,10 @@ function saveLocal(){try{localStorage.setItem(LOCAL_KEY,JSON.stringify(S))}catch
 const timers=new Map();
 function saveRow(key,row){
   if(backend==="local"){saveLocal();return}
+  if(noDb())return;
   setStatus("儲存中…");
   const tk=key+":"+row.id;clearTimeout(timers.get(tk));
-  timers.set(tk,setTimeout(async()=>{timers.delete(tk);
+  timers.set(tk,setTimeout(async()=>{timers.delete(tk);if(!sb)return;
     const {error}=await sb.from(MAP[key].table).upsert(toDb(key,row,S[key].indexOf(row)*10));
     if(error)dbErr(error);else if(!timers.size)setStatus("已儲存 "+new Date().toLocaleTimeString("zh-TW",{hour12:false}),"ok");
   },600));
@@ -371,6 +376,7 @@ function saveRow(key,row){
 /* 新增／刪除／排序：整張表重編 sort 後寫入 */
 async function saveTable(key,deletedId){
   if(backend==="local"){saveLocal();return}
+  if(noDb())return;
   setStatus("儲存中…");
   if(deletedId){const {error}=await sb.from(MAP[key].table).delete().eq("id",deletedId);if(error)return dbErr(error)}
   if(S[key].length){const {error}=await sb.from(MAP[key].table).upsert(S[key].map((r,i)=>toDb(key,r,i*10)));if(error)return dbErr(error)}
@@ -380,6 +386,7 @@ async function saveTable(key,deletedId){
 async function replaceAll(st){
   st=withIds(clone(st));
   if(backend==="local"){S=st;saveLocal();return}
+  if(!sb)throw new Error(NO_DB);
   setStatus("寫入中…");
   for(const k of KEYS){
     let r=await sb.from(MAP[k].table).delete().not("id","is",null);if(r.error)throw r.error;
@@ -476,7 +483,9 @@ tabs.forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 
 /* ---- 連線與登入 ---- */
 const connEl=document.getElementById("conn"), appEl=document.getElementById("app");
-function showConn(html){connEl.innerHTML=html;connEl.hidden=false;appEl.hidden=true}
+const reloadBtn=document.getElementById("reloadBtn"), logoutBtn=document.getElementById("logoutBtn");
+function setAppChrome(on){reloadBtn.hidden=!on;logoutBtn.hidden=!on;if(!on)document.getElementById("who").textContent=""}
+function showConn(html){connEl.innerHTML=html;connEl.hidden=false;appEl.hidden=true;setAppChrome(false)}
 function setupForm(err){
   const c=readCfg();
   showConn('<h2>連線到 Supabase</h2><p>第一次使用請填入專案網址與 anon key（Supabase Dashboard → Project Settings → API）。只會存在這個瀏覽器，不會寫進檔案。</p>'+
@@ -500,7 +509,7 @@ function loginForm(err){
   document.getElementById("editCfg").onclick=()=>setupForm();
 }
 async function openApp(){
-  connEl.hidden=true;appEl.hidden=false;
+  connEl.hidden=true;appEl.hidden=false;setAppChrome(true);
   document.getElementById("who").textContent=backend==="local"?"本機試用（資料只存在此瀏覽器）":"Supabase ‧ "+userEmail;
   renderEditors();renderOut();
   let t0="out";try{t0=localStorage.getItem("trip-web-tab")||"out"}catch(e){}
@@ -511,12 +520,14 @@ async function openApp(){
   }
 }
 async function start(){
+  timers.forEach(clearTimeout);timers.clear();
+  backend="none";sb=null;userEmail="";
   const c=readCfg();
   if(c.local){backend="local";await loadAll();setStatus("");return openApp()}
   if(!c.url||!c.key)return setupForm();
   if(!window.supabase){return setupForm("無法載入 Supabase 程式庫（cdn.jsdelivr.net），請確認網路連線。")}
+  try{sb=window.supabase.createClient(c.url,c.key)}catch(err){sb=null;return setupForm("連線設定有誤："+(err.message||err))}
   backend="supabase";
-  sb=window.supabase.createClient(c.url,c.key);
   const {data:{session}}=await sb.auth.getSession();
   if(!session)return loginForm();
   userEmail=session.user.email||"";
@@ -527,8 +538,8 @@ async function start(){
   openApp();
 }
 async function logout(){if(sb)await sb.auth.signOut();start()}
-document.getElementById("reloadBtn").onclick=async()=>{try{await loadAll();renderEditors();renderOut();toast("已重新載入")}catch(err){dbErr(err)}};
-document.getElementById("logoutBtn").onclick=()=>{if(backend==="local"){writeCfg({...readCfg(),local:false});start()}else logout()};
+reloadBtn.onclick=async()=>{if(appEl.hidden)return start();try{await loadAll();renderEditors();renderOut();toast("已重新載入")}catch(err){dbErr(err,"讀取失敗")}};
+logoutBtn.onclick=()=>{if(backend==="local"){writeCfg({...readCfg(),local:false});start()}else logout()};
 start();
 })();
 </script>
