@@ -84,6 +84,7 @@ textarea.io{width:100%;box-sizing:border-box;min-height:8em;font-family:ui-monos
 #conn{max-width:460px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px;display:grid;gap:10px}
 #conn h2{font-family:var(--f-display);margin:0;font-size:1.2rem} #conn p{margin:0;color:var(--muted);font-size:.88rem}
 #conn .err{color:var(--bad)} .form{display:grid;gap:6px}
+.form .hint{margin:0;font-size:.82rem;color:var(--muted)} .form .hint.err{color:var(--bad)}
 .form input{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:4px;padding:6px 8px;min-width:0}
 .form .row{margin-top:8px} code{font-size:.85em}
 body{margin:0}
@@ -332,7 +333,28 @@ const uid=()=>(crypto.randomUUID?crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xx
 const withIds=st=>{KEYS.forEach(k=>st[k].forEach(r=>{if(!r.id)r.id=uid()}));return st};
 const CFG_KEY="trip-supabase-config", LOCAL_KEY="trip-web-v1";
 const DEFAULT_URL="https://cfndlfumfsovqgkkfoug.supabase.co";
+/* 內建公開金鑰（Supabase 的 publishable／anon key，本來就設計放在前端）。
+   填了之後開網頁就直接到登入畫面，不必每台電腦、每個瀏覽器再輸入連線設定。
+   資料安全靠 schema.sql 的 RLS：四張表只開放已登入帳號讀寫，未登入者拿到金鑰也讀不到。 */
+const DEFAULT_KEY="";
+/* 把使用者貼上的各種形式換成 Supabase API 網址（https://<專案代號>.supabase.co）；無法辨識回傳 null
+   - Dashboard 網址 https://supabase.com/dashboard/project/<代號>/…
+   - 只有專案代號、少了 https://、或多了 /rest/v1 之類的路徑
+   - 自架或自訂網域：保留其 origin */
+const URL_ERR="看不出是 Supabase 專案網址。請填 https://<專案代號>.supabase.co，或直接貼上 Dashboard 的專案網址。";
+function normUrl(raw){
+  let s=String(raw||"").trim().replace(/\/+$/,"");if(!s)return null;
+  const m=s.match(/supabase\.com\/dashboard\/project\/([a-z0-9]+)/i);
+  if(m)return "https://"+m[1].toLowerCase()+".supabase.co";
+  if(/^[a-z]{20}$/i.test(s))return "https://"+s.toLowerCase()+".supabase.co";
+  if(!/^https?:\/\//i.test(s))s="https://"+s;
+  let u;try{u=new URL(s)}catch(e){return null}
+  if(!u.hostname.includes(".")||/(^|\.)supabase\.com$/i.test(u.hostname))return null;
+  return u.origin;
+}
 function readCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY))||{}}catch(e){return{}}}
+/* 實際使用的連線設定：瀏覽器裡手動改過的優先，否則用內建值（內建值不寫回 localStorage，日後更新程式即生效） */
+function effCfg(){const c=readCfg();return{...c,url:c.url||DEFAULT_URL,key:c.key||DEFAULT_KEY}}
 function writeCfg(c){try{localStorage.setItem(CFG_KEY,JSON.stringify(c))}catch(e){}}
 
 let S={comps:[],regions:[],cities:[],fares:[]};
@@ -445,7 +467,22 @@ document.addEventListener("input",e=>{
 document.addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.mv&&b.dataset.t){const k=b.dataset.t,i=+b.dataset.i,j=i+ +b.dataset.mv;if(j<0||j>=S[k].length)return;[S[k][i],S[k][j]]=[S[k][j],S[k][i]];saveTable(k);renderTable(k);renderOut()}
-  else if(b.hasAttribute("data-del")&&b.dataset.t){const k=b.dataset.t,[gone]=S[k].splice(+b.dataset.i,1);saveTable(k,gone.id);renderTable(k);renderOut()}
+  /* 刪除分兩步：先在該列換成「確定刪除？」，按確認才真正刪（雲端模式會直接刪資料庫） */
+  else if(b.hasAttribute("data-del")&&b.dataset.t){const k=b.dataset.t,i=+b.dataset.i,row=S[k][i];if(!row)return;
+    renderTable(k);
+    const td=document.querySelector("#"+SPECS[k].el+' button[data-del][data-i="'+i+'"]').closest("td");
+    const kw=String(row[SPECS[k].cols[0][0]]??"").trim();
+    td.innerHTML='<span class="confirm" role="alert">確定刪除「'+esc(kw||"（空白列）")+'」？'+
+      (k==="fares"&&kw===FALLBACK?'這是查無路線時的後備列，':'')+(backend==="supabase"?'刪除後無法復原。':'')+
+      ' <button class="btn small danger" data-delyes data-t="'+k+'" data-id="'+esc(row.id)+'">刪除</button>'+
+      '<button class="btn small" data-delno data-t="'+k+'" data-i="'+i+'">取消</button></span>';
+    td.querySelector("[data-delno]").focus()}
+  else if(b.hasAttribute("data-delyes")&&b.dataset.t){const k=b.dataset.t,i=S[k].findIndex(r=>r.id===b.dataset.id);
+    if(i<0)return renderTable(k);
+    const [gone]=S[k].splice(i,1),kw=String(gone[SPECS[k].cols[0][0]]??"").trim();
+    saveTable(k,gone.id);renderTable(k);renderOut();toast("已刪除「"+(kw||"空白列")+"」")}
+  else if(b.hasAttribute("data-delno")&&b.dataset.t){const k=b.dataset.t;renderTable(k);
+    const d=document.querySelector("#"+SPECS[k].el+' button[data-del][data-i="'+b.dataset.i+'"]');if(d)d.focus()}
   else if(b.dataset.add){const k=b.dataset.add;S[k].push(k==="cities"?{id:uid(),kw:"",region:DEFAULT_REGION,note:""}:{id:uid(),kw:"",fare:0,detail:"",extra:""});saveTable(k);renderTable(k)}
 });
 document.getElementById("addComp").onclick=()=>{S.comps.push({id:uid(),name:"",start:"",end:"",loc:"",players:"",staff:"",prep:"否",mode:"大眾運輸",fare:"",items:1,perItem:"",clean:"",src:"基本補助費"});saveTable("comps");renderTable("comps");
@@ -488,16 +525,26 @@ function setAppChrome(on){reloadBtn.hidden=!on;logoutBtn.hidden=!on;if(!on)docum
 function showConn(html){connEl.innerHTML=html;connEl.hidden=false;appEl.hidden=true;setAppChrome(false)}
 function setupForm(err){
   const c=readCfg();
-  showConn('<h2>連線到 Supabase</h2><p>第一次使用請填入專案網址與 anon key（Supabase Dashboard → Project Settings → API）。只會存在這個瀏覽器，不會寫進檔案。</p>'+
+  showConn('<h2>連線到 Supabase</h2><p>第一次使用請填入專案網址與 anon key（Supabase Dashboard → Project Settings → API）。Project URL 也可以直接貼 Dashboard 網址，會自動換成正確格式。只會存在這個瀏覽器，不會寫進檔案。</p>'+
     (err?'<p class="err">'+esc(err)+'</p>':'')+
-    '<form id="cfgForm" class="form"><label for="cfgUrl">Project URL</label><input id="cfgUrl" required value="'+esc(c.url||DEFAULT_URL)+'">'+
-    '<label for="cfgKey">anon public key</label><input id="cfgKey" required value="'+esc(c.key||"")+'" placeholder="eyJhbGciOi…">'+
+    '<form id="cfgForm" class="form"><label for="cfgUrl">Project URL</label><input id="cfgUrl" required aria-describedby="cfgUrlHint" value="'+esc(c.url||DEFAULT_URL)+'"><p id="cfgUrlHint" class="hint" aria-live="polite"></p>'+
+    '<label for="cfgKey">anon public key</label><input id="cfgKey" required value="'+esc(c.key||DEFAULT_KEY)+'" placeholder="sb_publishable_… 或 eyJhbGciOi…">'+
     '<div class="row"><button class="btn primary" type="submit">儲存並繼續</button><button class="btn" type="button" id="goLocal">先用本機資料試用</button></div></form>');
-  document.getElementById("cfgForm").onsubmit=e=>{e.preventDefault();writeCfg({url:document.getElementById("cfgUrl").value.trim().replace(/\/+$/,""),key:document.getElementById("cfgKey").value.trim()});start()};
+  const urlIn=document.getElementById("cfgUrl"), hint=document.getElementById("cfgUrlHint");
+  /* 即時辨識：離開欄位時把 Dashboard 網址等格式換成 API 網址，並說明改了什麼 */
+  const check=()=>{const raw=urlIn.value.trim(), u=normUrl(raw);
+    if(!raw){hint.textContent="";hint.classList.remove("err");urlIn.removeAttribute("aria-invalid");return null}
+    if(!u){hint.textContent=URL_ERR;hint.classList.add("err");urlIn.setAttribute("aria-invalid","true");return null}
+    hint.classList.remove("err");urlIn.removeAttribute("aria-invalid");
+    if(u!==raw.replace(/\/+$/,"")){urlIn.value=u;hint.textContent="已自動改為 API 網址："+u}else hint.textContent="";
+    return u};
+  urlIn.addEventListener("change",check);
+  document.getElementById("cfgForm").onsubmit=e=>{e.preventDefault();const url=check();if(!url)return urlIn.focus();
+    writeCfg({url,key:document.getElementById("cfgKey").value.trim()});start()};
   document.getElementById("goLocal").onclick=()=>{writeCfg({...readCfg(),local:true});start()};
 }
 function loginForm(err){
-  const c=readCfg();
+  const c=effCfg();
   showConn('<h2>登入</h2><p>使用在 Supabase（Authentication → Users）建立的帳號登入。專案：'+esc(c.url)+'</p>'+
     (err?'<p class="err">'+esc(err)+'</p>':'')+
     '<form id="loginForm" class="form"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required>'+
@@ -522,9 +569,10 @@ async function openApp(){
 async function start(){
   timers.forEach(clearTimeout);timers.clear();
   backend="none";sb=null;userEmail="";
-  const c=readCfg();
+  const c=effCfg();
   if(c.local){backend="local";await loadAll();setStatus("");return openApp()}
   if(!c.url||!c.key)return setupForm();
+  {const u=normUrl(c.url);if(!u)return setupForm(URL_ERR);if(u!==c.url){c.url=u;const o=readCfg();if(o.url){o.url=u;writeCfg(o)}}}
   if(!window.supabase){return setupForm("無法載入 Supabase 程式庫（cdn.jsdelivr.net），請確認網路連線。")}
   try{sb=window.supabase.createClient(c.url,c.key)}catch(err){sb=null;return setupForm("連線設定有誤："+(err.message||err))}
   backend="supabase";
