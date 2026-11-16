@@ -69,8 +69,13 @@ cd trip
 
 初次設定：
 1. Supabase Dashboard → SQL Editor 執行 `supabase/schema.sql`（**會清空重建**四張表）
-2. Authentication → Users 新增帳號（RLS 只允許登入者讀寫）
-3. 開 `index.html`，填 Project URL 與 anon key（只存在該瀏覽器的 localStorage，不寫進 repo），再登入
+2. Authentication → Users 新增帳號（RLS 只允許登入者讀寫）。**已關閉開放註冊**（Sign In / Providers → Allow new users to sign up），
+   新帳號一律由管理者在 Dashboard 手動建立；若重新開啟註冊，任何人都能自行註冊並讀寫資料
+3. 開 `index.html` 直接登入即可。Project URL 與公開金鑰（`sb_publishable_…`）已內建於 `DEFAULT_URL`／`DEFAULT_KEY`；
+   這把金鑰本來就設計公開於前端，資料安全靠 RLS（未登入時四張表讀到的都是空陣列）。
+   換專案時改這兩個常數；個別瀏覽器仍可用登入畫面的「修改連線設定」覆蓋（存在該瀏覽器的 localStorage）
+4. 「忘記密碼？」的重設信會導回本頁網址；該網址必須列在 Authentication → URL Configuration 的
+   Redirect URLs（Site URL 也建議設為同一網址），否則會被導到 Site URL。直接開檔案（file://）無法使用此功能
 
 與 VBA 版的差異：比賽地點空白的列直接略過；只有備註含「★待確認」才提醒；`＊預設` 不論位置都只當後備；
 查不到地點時不自動改表，改由警告旁的「加入【二】／【三】」按鈕新增。網頁版與 `.xlsm` **不會互相同步**。

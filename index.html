@@ -336,7 +336,7 @@ const DEFAULT_URL="https://cfndlfumfsovqgkkfoug.supabase.co";
 /* 內建公開金鑰（Supabase 的 publishable／anon key，本來就設計放在前端）。
    填了之後開網頁就直接到登入畫面，不必每台電腦、每個瀏覽器再輸入連線設定。
    資料安全靠 schema.sql 的 RLS：四張表只開放已登入帳號讀寫，未登入者拿到金鑰也讀不到。 */
-const DEFAULT_KEY="";
+const DEFAULT_KEY="sb_publishable_WY0MFmaIszdelITE0DWTSQ_jxB84PL5";
 /* 重設密碼信的連結回到本頁時，Supabase 會在網址帶上 type=recovery（成功）或 error=…（失效）。
    必須在 createClient 讀走並清掉之前先記下來。 */
 const AUTH_LINK=new URLSearchParams(location.hash.slice(1)+"&"+location.search.slice(1));
