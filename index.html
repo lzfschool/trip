@@ -83,7 +83,7 @@ textarea.io{width:100%;box-sizing:border-box;min-height:8em;font-family:ui-monos
 .status [data-kind="ok"]{color:var(--ok)} .status [data-kind="bad"]{color:var(--bad)}
 #conn{max-width:460px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px;display:grid;gap:10px}
 #conn h2{font-family:var(--f-display);margin:0;font-size:1.2rem} #conn p{margin:0;color:var(--muted);font-size:.88rem}
-#conn .err{color:var(--bad)} #conn .ok{color:var(--ok)} .form{display:grid;gap:6px}
+#conn .err{color:var(--bad)} .form{display:grid;gap:6px}
 .form .hint{margin:0;font-size:.82rem;color:var(--muted)} .form .hint.err{color:var(--bad)}
 .form input{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:4px;padding:6px 8px;min-width:0}
 .form .row{margin-top:8px} code{font-size:.85em}
@@ -337,15 +337,6 @@ const DEFAULT_URL="https://cfndlfumfsovqgkkfoug.supabase.co";
    填了之後開網頁就直接到登入畫面，不必每台電腦、每個瀏覽器再輸入連線設定。
    資料安全靠 schema.sql 的 RLS：四張表只開放已登入帳號讀寫，未登入者拿到金鑰也讀不到。 */
 const DEFAULT_KEY="sb_publishable_WY0MFmaIszdelITE0DWTSQ_jxB84PL5";
-/* 重設密碼信的連結回到本頁時，Supabase 會在網址帶上 type=recovery（成功）或 error=…（失效）。
-   必須在 createClient 讀走並清掉之前先記下來。 */
-const AUTH_LINK=new URLSearchParams(location.hash.slice(1)+"&"+location.search.slice(1));
-let authLinkPending=AUTH_LINK.has("error")||AUTH_LINK.get("type")==="recovery";
-const pageUrl=()=>location.href.split(/[?#]/)[0];
-function linkErrMsg(q){
-  if(q.get("error_code")==="otp_expired")return "重設密碼的連結已失效或已用過（每個連結只能用一次，且有時效）。請按「忘記密碼？」重新寄一封。";
-  return "信件連結驗證失敗："+(q.get("error_description")||q.get("error")).replace(/\+/g," ");
-}
 /* 把使用者貼上的各種形式換成 Supabase API 網址（https://<專案代號>.supabase.co）；無法辨識回傳 null
    - Dashboard 網址 https://supabase.com/dashboard/project/<代號>/…
    - 只有專案代號、少了 https://、或多了 /rest/v1 之類的路徑
@@ -558,44 +549,11 @@ function loginForm(err){
     (err?'<p class="err">'+esc(err)+'</p>':'')+
     '<form id="loginForm" class="form"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required>'+
     '<label for="pw">密碼</label><input id="pw" type="password" autocomplete="current-password" required>'+
-    '<div class="row"><button class="btn primary" type="submit">登入</button><button class="btn" type="button" id="forgot">忘記密碼？</button><button class="btn" type="button" id="editCfg">修改連線設定</button></div></form>');
+    '<div class="row"><button class="btn primary" type="submit">登入</button><button class="btn" type="button" id="editCfg">修改連線設定</button></div></form>');
   document.getElementById("loginForm").onsubmit=async e=>{e.preventDefault();
     const {error}=await sb.auth.signInWithPassword({email:document.getElementById("email").value.trim(),password:document.getElementById("pw").value});
     if(error)loginForm("登入失敗："+error.message);else start()};
   document.getElementById("editCfg").onclick=()=>setupForm();
-  document.getElementById("forgot").onclick=()=>forgotForm(document.getElementById("email").value.trim());
-}
-/* 忘記密碼：寄重設信，連結導回本頁（網址須列在 Supabase 的 Redirect URLs，否則會被導到 Site URL） */
-function forgotForm(email,msg){
-  const fileMode=location.protocol==="file:";
-  showConn('<h2>忘記密碼</h2>'+
-    (fileMode?'<p class="err">目前是直接開啟檔案（file://），重設密碼信的連結無法導回這個頁面。請改用網址開啟本頁後再寄送，或請管理者在 Supabase 重設密碼。</p>'
-             :'<p>輸入登入用的 Email，系統會寄一封重設密碼信。點信中的連結會回到本頁，設定新密碼後直接登入。連結只能用一次，且有時效。</p>')+
-    (msg?'<p class="'+(msg.ok?"ok":"err")+'" role="status">'+esc(msg.t)+'</p>':'')+
-    '<form id="fgForm" class="form"><label for="fgEmail">Email</label><input id="fgEmail" type="email" autocomplete="username" required value="'+esc(email||"")+'">'+
-    '<div class="row"><button class="btn primary" type="submit"'+(fileMode?' disabled':'')+'>寄送重設密碼信</button><button class="btn" type="button" id="fgBack">返回登入</button></div></form>');
-  document.getElementById("fgBack").onclick=()=>loginForm();
-  document.getElementById("fgForm").onsubmit=async e=>{e.preventDefault();
-    const em=document.getElementById("fgEmail").value.trim(), btn=e.submitter||document.querySelector("#fgForm .primary");
-    btn.disabled=true;btn.textContent="寄送中…";
-    const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:pageUrl()});
-    if(error)return forgotForm(em,{t:/rate limit/i.test(error.message)?"寄信次數已達上限（Supabase 內建寄信服務每小時只能寄少量信），請稍後再試。":"寄送失敗："+error.message});
-    forgotForm(em,{ok:1,t:"已送出。若此 Email 有帳號，稍後會收到重設密碼信（也請看垃圾郵件匣）。點信中連結回到本頁即可設定新密碼。"})};
-}
-/* 從重設信連結回來：已取得暫時登入狀態，請使用者設定新密碼 */
-function newPwForm(err){
-  showConn('<h2>設定新密碼</h2><p>帳號：'+esc(userEmail)+'</p>'+(err?'<p class="err" role="alert">'+esc(err)+'</p>':'')+
-    '<form id="pwForm" class="form"><label for="pw1">新密碼（至少 6 個字元）</label><input id="pw1" type="password" autocomplete="new-password" minlength="6" required>'+
-    '<label for="pw2">再輸入一次</label><input id="pw2" type="password" autocomplete="new-password" minlength="6" required>'+
-    '<div class="row"><button class="btn primary" type="submit">儲存新密碼</button><button class="btn" type="button" id="pwCancel">取消</button></div></form>');
-  document.getElementById("pw1").focus();
-  document.getElementById("pwCancel").onclick=logout;
-  document.getElementById("pwForm").onsubmit=async e=>{e.preventDefault();
-    const a=document.getElementById("pw1").value,b=document.getElementById("pw2").value;
-    if(a!==b)return newPwForm("兩次輸入的密碼不一致。");
-    const {error}=await sb.auth.updateUser({password:a});
-    if(error)return newPwForm("更新失敗："+error.message);
-    toast("密碼已更新");start()};
 }
 async function openApp(){
   connEl.hidden=true;appEl.hidden=false;setAppChrome(true);
@@ -619,10 +577,6 @@ async function start(){
   try{sb=window.supabase.createClient(c.url,c.key)}catch(err){sb=null;return setupForm("連線設定有誤："+(err.message||err))}
   backend="supabase";
   const {data:{session}}=await sb.auth.getSession();
-  if(authLinkPending){authLinkPending=false;history.replaceState(null,"",pageUrl());
-    if(AUTH_LINK.has("error"))return loginForm(linkErrMsg(AUTH_LINK));
-    if(!session)return loginForm("重設密碼的連結無法使用，請按「忘記密碼？」重新寄一封。");
-    userEmail=session.user.email||"";return newPwForm()}
   if(!session)return loginForm();
   userEmail=session.user.email||"";
   try{await loadAll()}catch(err){
